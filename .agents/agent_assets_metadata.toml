@@ -12,3 +12,9 @@ id = "sRSKXgwahlknlMs07jpn9"
 uri = "file://LuciFeR0x0systeM-CUI.zip"
 type = "unspecified"
 title = "LuciFeR0x0systeM — CUI版（iSH対応）"
+
+[[outputs]]
+id = "_L4NOGIvcUmIJeUF7o0y5"
+uri = "file://jssh-engine.zip"
+type = "unspecified"
+title = "jssh DAG Engine v2 — LuciFeR0x0systeM"

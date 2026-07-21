@@ -1,0 +1,117 @@
+{
+  "title": "LuciFeR0x0systeM :: SSH Execution Payload",
+  "version": "2.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "created_at": "2026-07-21T00:00:00Z",
+    "tags": ["deploy", "audit", "automated"],
+    "environment": "production"
+  },
+  "variables": {
+    "DEPLOY_USER": "deploy_user",
+    "TARGET_HOST": "192.168.1.100",
+    "SERVICE_NAME": "nginx"
+  },
+  "connection_settings": {
+    "host": "{{TARGET_HOST}}",
+    "port": 22,
+    "jump_host": {
+      "enabled": false,
+      "host": "bastion.example.com",
+      "port": 22,
+      "username": "jump_user"
+    },
+    "auth": {
+      "username": "{{DEPLOY_USER}}",
+      "auth_method": "publickey",
+      "private_key_path": "~/.ssh/id_ed25519",
+      "passphrase": null,
+      "fallback_method": "password"
+    },
+    "options": {
+      "timeout_seconds": 10,
+      "keepalive_interval_seconds": 30,
+      "strict_host_key_checking": false,
+      "max_retries": 3,
+      "retry_delay_seconds": 2,
+      "shell": "bash",
+      "encoding": "utf-8"
+    }
+  },
+  "execution_sequence": [
+    {
+      "step_id": 1,
+      "name": "Check Disk Space",
+      "command": "df -h /",
+      "shell": "sh",
+      "env": { "LANG": "C" },
+      "ignore_errors": false,
+      "timeout": 5,
+      "on_failure": "abort",
+      "depends_on": [],
+      "parallel_group": null
+    },
+    {
+      "step_id": 2,
+      "name": "Update Apt Package Index",
+      "command": "sudo apt-get update -y",
+      "shell": "bash",
+      "env": { "DEBIAN_FRONTEND": "noninteractive" },
+      "ignore_errors": false,
+      "timeout": 60,
+      "on_failure": "abort",
+      "depends_on": [1],
+      "parallel_group": null
+    },
+    {
+      "step_id": 3,
+      "name": "Check Service Status",
+      "command": "systemctl status {{SERVICE_NAME}}",
+      "shell": "bash",
+      "env": {},
+      "ignore_errors": true,
+      "timeout": 10,
+      "on_failure": "continue",
+      "depends_on": [1],
+      "parallel_group": "health-checks"
+    },
+    {
+      "step_id": 4,
+      "name": "Check Memory",
+      "command": "free -h",
+      "shell": "sh",
+      "env": {},
+      "ignore_errors": true,
+      "timeout": 5,
+      "on_failure": "continue",
+      "depends_on": [1],
+      "parallel_group": "health-checks"
+    },
+    {
+      "step_id": 5,
+      "name": "Final Report",
+      "command": "uname -a && uptime",
+      "shell": "bash",
+      "env": {},
+      "ignore_errors": false,
+      "timeout": 5,
+      "on_failure": "abort",
+      "depends_on": [2, 3, 4],
+      "parallel_group": null
+    }
+  ],
+  "hooks": {
+    "pre_connect": "echo '[*] Connecting to {{TARGET_HOST}}'",
+    "post_success": "[OK] All steps complete",
+    "post_failure": "[!!] Pipeline failed at step {{failed_step}}"
+  },
+  "expected_output_schema": {
+    "step_id": "number",
+    "command": "string",
+    "exit_code": "number",
+    "stdout": "string",
+    "stderr": "string",
+    "execution_time_ms": "number",
+    "status": "success | failed | skipped | timeout"
+  }
+}
