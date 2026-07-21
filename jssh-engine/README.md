@@ -1,5 +1,12 @@
 # jssh — JSON-driven SSH Automation Engine
 
+![](https://img.shields.io/badge/jssh-v1.0-FFD700?style=flat-square)
+![](https://img.shields.io/badge/platform-Linux%20%7C%20macOS%20%7C%20iOS-FFD700?style=flat-square)
+![](https://img.shields.io/badge/runtime-Node.js%20ESM-FFD700?style=flat-square)
+![](https://img.shields.io/badge/license-MIT-FFD700?style=flat-square)
+![](https://img.shields.io/badge/ChaosOS-extension%20pack-FFD700?style=flat-square)
+![](https://img.shields.io/badge/iSH-iOS%20ready-FFD700?style=flat-square)
+
 Run multi-server SSH workflows from a single JSON file.  
 DAG execution · parallel groups · jump host · variable interpolation · retry control.
 
