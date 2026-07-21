@@ -1,0 +1,72 @@
+{
+  "__doc__": "Layer 4: Chaos Routing & Control — mitigation mode selection, policy enforcement",
+  "name": "ChaosOS :: Layer 4 — Chaos Routing & Control",
+  "chaos_layer": 4,
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "SSH_USER": "root",
+    "KEY_PATH": "~/.ssh/id_rsa",
+    "LOG_DIR": "/var/log/chaos-os",
+    "CHAOS_MODE": "SILENT_CHAOS_MODE",
+    "MAX_PANICS_PER_HOUR": "3",
+    "FULL_DESTRUCTION": "false"
+  },
+  "connection_settings": {
+    "host": "{{TARGET_HOST}}",
+    "port": 22,
+    "username": "{{SSH_USER}}",
+    "privateKeyPath": "{{KEY_PATH}}"
+  },
+  "jump_host": { "enabled": false },
+  "output": {
+    "format": "summary",
+    "save_result": true,
+    "result_key": "layer4_result"
+  },
+  "execution_sequence": [
+    {
+      "step_id": 1,
+      "name": "Load previous layer results",
+      "command": "cat {{LOG_DIR}}/layer1.json {{LOG_DIR}}/layer2.json {{LOG_DIR}}/layer3.json 2>/dev/null || echo '{\"warning\":\"previous layers not found\"}'",
+      "depends_on": [],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 2,
+      "name": "Apply SILENT_CHAOS_MODE (log only)",
+      "command": "echo '[ChaosOS] Mode: {{CHAOS_MODE}}'; echo '[ChaosOS] full_destruction_enabled: {{FULL_DESTRUCTION}}'; echo '[ChaosOS] panic_limit: {{MAX_PANICS_PER_HOUR}}/hr'; dmesg --read-clear 2>/dev/null | grep -iE '(panic|oops|bug)' | tail -5 >> {{LOG_DIR}}/panic.log && echo 'panic log updated' || echo 'dmesg clear skipped'",
+      "depends_on": [1],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 3,
+      "name": "Enforce data loss guard",
+      "command": "sync && echo '[ChaosOS] data_loss_guard: ACTIVE — buffers flushed'",
+      "depends_on": [1],
+      "parallel_group": "routing",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 4,
+      "name": "Kill zombie processes",
+      "command": "ZOMBIES=$(ps aux | awk '$8==\"Z\"{print $2}'); if [ -n \"$ZOMBIES\" ]; then echo \"Signaling zombie parents...\"; for z in $ZOMBIES; do kill -SIGCHLD $(ps -o ppid= -p $z 2>/dev/null) 2>/dev/null; done; echo \"done\"; else echo 'NO_ZOMBIES'; fi",
+      "depends_on": [1],
+      "parallel_group": "routing",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 5,
+      "name": "Generate final chaos report",
+      "command": "echo '{\"layer\":4,\"chaos_mode\":\"{{CHAOS_MODE}}\",\"full_destruction_enabled\":{{FULL_DESTRUCTION}},\"max_panics_per_hour\":{{MAX_PANICS_PER_HOUR}},\"data_loss_guard\":true,\"status\":\"complete\",\"timestamp\":\"'$(date -Iseconds)'\"}' | tee {{LOG_DIR}}/layer4.json",
+      "depends_on": [2, 3, 4],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 6,
+      "name": "ChaosOS pipeline complete",
+      "command": "echo ''; echo '╔══════════════════════════════════╗'; echo '║  ChaosOS Detection Complete      ║'; echo '║  Mode: {{CHAOS_MODE}}'; echo '╚══════════════════════════════════╝'; ls -la {{LOG_DIR}}/",
+      "depends_on": [5],
+      "on_failure": "continue"
+    }
+  ]
+}

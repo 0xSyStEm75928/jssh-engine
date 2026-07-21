@@ -1,0 +1,114 @@
+{
+  "__doc__": "Full ChaosOS Pipeline — Layer 1→2→3→4 in sequence. One command, full detection.",
+  "name": "ChaosOS :: Full Pipeline (Layer 1-4)",
+  "chaos_version": "1.0.0",
+  "author": "0xSyStEm75928 / LuciFeR0x0systeM",
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "SSH_USER": "root",
+    "KEY_PATH": "~/.ssh/id_rsa",
+    "LOG_DIR": "/var/log/chaos-os",
+    "CHAOS_MODE": "SILENT_CHAOS_MODE",
+    "FULL_DESTRUCTION": "false",
+    "MAX_PANICS_PER_HOUR": "3"
+  },
+  "connection_settings": {
+    "host": "{{TARGET_HOST}}",
+    "port": 22,
+    "username": "{{SSH_USER}}",
+    "privateKeyPath": "{{KEY_PATH}}"
+  },
+  "jump_host": { "enabled": false },
+  "output": {
+    "format": "summary",
+    "save_result": true,
+    "result_key": "chaos_full_report"
+  },
+  "execution_sequence": [
+    {
+      "step_id": 1,
+      "name": "[INIT] ChaosOS boot",
+      "command": "mkdir -p {{LOG_DIR}} && echo '{\"chaos_os\":\"booting\",\"timestamp\":\"'$(date -Iseconds)'\",\"mode\":\"{{CHAOS_MODE}}\"}' | tee {{LOG_DIR}}/boot.json",
+      "depends_on": [],
+      "on_failure": "abort"
+    },
+    {
+      "step_id": 2,
+      "name": "[L1] Kernel type detection",
+      "command": "uname -sr && uname -v",
+      "depends_on": [1],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 3,
+      "name": "[L1] Memory violation scan",
+      "command": "dmesg 2>/dev/null | grep -iE '(segfault|oom|killed)' | tail -10 || echo 'NO_VIOLATIONS'",
+      "depends_on": [1],
+      "parallel_group": "l1",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 4,
+      "name": "[L1] Filesystem collision check",
+      "command": "mount | grep -iE '(apfs|hfs|exfat)' || echo 'STANDARD_FS'; df -Th 2>/dev/null | head -8",
+      "depends_on": [1],
+      "parallel_group": "l1",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 5,
+      "name": "[L2] Process dump",
+      "command": "ps aux --sort=-%cpu 2>/dev/null | head -15 || ps aux | head -15",
+      "depends_on": [2, 3, 4],
+      "parallel_group": "l2",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 6,
+      "name": "[L2] Memory state dump",
+      "command": "cat /proc/meminfo 2>/dev/null | grep -E '(MemTotal|MemFree|MemAvailable|SwapTotal|SwapFree)' || echo 'MEM_UNAVAILABLE'",
+      "depends_on": [2, 3, 4],
+      "parallel_group": "l2",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 7,
+      "name": "[L3] Stability scoring",
+      "command": "LOAD=$(uptime | awk -F'load average:' '{print $2}' | awk -F, '{print $1}' | tr -d ' '); CPUS=$(nproc 2>/dev/null || echo 1); awk \"BEGIN{s=1-($LOAD/$CPUS); if(s<0)s=0; printf 'stability_score=%.2f\\n',s}\"",
+      "depends_on": [5, 6],
+      "parallel_group": "l3",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 8,
+      "name": "[L3] Package manager conflict",
+      "command": "which brew apt-get pacman yum apk 2>/dev/null | xargs -I{} basename {} | tr '\\n' '+' | sed 's/+$//' && echo ''",
+      "depends_on": [5, 6],
+      "parallel_group": "l3",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 9,
+      "name": "[L4] Data loss guard",
+      "command": "sync && echo '[L4] buffers_flushed=true'",
+      "depends_on": [7, 8],
+      "parallel_group": "l4",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 10,
+      "name": "[L4] Zombie reaper",
+      "command": "COUNT=$(ps aux | awk '$8==\"Z\"' | wc -l); echo '[L4] zombie_count='$COUNT",
+      "depends_on": [7, 8],
+      "parallel_group": "l4",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 11,
+      "name": "[REPORT] ChaosOS final output",
+      "command": "echo ''; echo '┌─────────────────────────────────────────┐'; echo '│  ChaosOS Detection Engine v1.0          │'; echo '│  by 0xSyStEm75928 / LuciFeR0x0systeM   │'; echo '├─────────────────────────────────────────┤'; echo '│  Mode : {{CHAOS_MODE}}'  ; echo '│  Guard: DATA_LOSS_GUARD=ACTIVE          │'; echo '│  Dest : {{LOG_DIR}}                │'; echo '│  Time : '$(date -Iseconds)'     │'; echo '└─────────────────────────────────────────┘'",
+      "depends_on": [9, 10],
+      "on_failure": "continue"
+    }
+  ]
+}

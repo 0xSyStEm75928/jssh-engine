@@ -1,0 +1,80 @@
+{
+  "__doc__": "Layer 3: Chaos Analysis — stability scoring, conflict classification, severity rating",
+  "name": "ChaosOS :: Layer 3 — Chaos Analysis",
+  "chaos_layer": 3,
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "SSH_USER": "root",
+    "KEY_PATH": "~/.ssh/id_rsa",
+    "LOG_DIR": "/var/log/chaos-os",
+    "STABILITY_THRESHOLD": "0.3"
+  },
+  "connection_settings": {
+    "host": "{{TARGET_HOST}}",
+    "port": 22,
+    "username": "{{SSH_USER}}",
+    "privateKeyPath": "{{KEY_PATH}}"
+  },
+  "jump_host": { "enabled": false },
+  "output": {
+    "format": "summary",
+    "save_result": true,
+    "result_key": "layer3_result"
+  },
+  "execution_sequence": [
+    {
+      "step_id": 1,
+      "name": "CPU load stability score",
+      "command": "uptime | awk -F'load average:' '{print $2}' | awk -F, '{printf \"load_1m=%.2f load_5m=%.2f load_15m=%.2f\\n\",$1,$2,$3}'",
+      "depends_on": [],
+      "parallel_group": "analysis",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 2,
+      "name": "Package manager conflict detection",
+      "command": "which brew apt-get pacman yum dnf apk 2>/dev/null | xargs -I{} basename {} | tr '\\n' ' ' && echo ''; dpkg --audit 2>/dev/null | head -10 || echo 'NO_DPKG_CONFLICTS'",
+      "depends_on": [],
+      "parallel_group": "analysis",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 3,
+      "name": "Audio subsystem conflict (CoreAudio vs PipeWire)",
+      "command": "systemctl status pipewire 2>/dev/null | grep -E '(active|failed)' | head -3; pactl info 2>/dev/null | grep 'Server Name' || pulseaudio --check -v 2>&1 | head -5 || echo 'AUDIO_SYSTEM_UNKNOWN'",
+      "depends_on": [],
+      "parallel_group": "analysis",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 4,
+      "name": "Zombie process count",
+      "command": "ps aux | awk '$8==\"Z\"' | wc -l | xargs -I{} echo 'zombie_count={}'",
+      "depends_on": [],
+      "parallel_group": "analysis",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 5,
+      "name": "Open file descriptor saturation check",
+      "command": "cat /proc/sys/fs/file-nr 2>/dev/null | awk '{printf \"fd_open=%s fd_max=%s util=%.1f%%\\n\",$1,$3,($1/$3)*100}' || echo 'FD_CHECK_UNAVAILABLE'",
+      "depends_on": [],
+      "parallel_group": "analysis",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 6,
+      "name": "Generate stability score",
+      "command": "LOAD=$(uptime | awk -F'load average:' '{print $2}' | awk -F, '{print $1}' | tr -d ' '); CPUS=$(nproc 2>/dev/null || echo 1); SCORE=$(awk \"BEGIN{s=1-($LOAD/$CPUS); if(s<0)s=0; printf \\\"%.2f\\\",s}\"); echo '{\"kernel_stability_score\":'$SCORE',\"threshold\":\"{{STABILITY_THRESHOLD}}\",\"ui_coherence_rating\":\"'$([ $(echo \"$SCORE > 0.5\" | bc -l) -eq 1 ] && echo STABLE || echo NIGHTMARE)'\"}'",
+      "depends_on": [1, 2, 3, 4, 5],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 7,
+      "name": "Save Layer 3 report",
+      "command": "echo '{\"layer\":3,\"status\":\"complete\",\"timestamp\":\"'$(date -Iseconds)'\"}' > {{LOG_DIR}}/layer3.json && cat {{LOG_DIR}}/layer3.json",
+      "depends_on": [6],
+      "on_failure": "continue"
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+{
+  "__doc__": "Layer 1: Kernel Trigger Detection — XNU/Linux conflict scan",
+  "name": "ChaosOS :: Layer 1 — Kernel Trigger Scan",
+  "chaos_layer": 1,
+  "chaos_threshold_level": "CRITICAL",
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "SSH_USER": "root",
+    "KEY_PATH": "~/.ssh/id_rsa",
+    "LOG_DIR": "/var/log/chaos-os"
+  },
+  "connection_settings": {
+    "host": "{{TARGET_HOST}}",
+    "port": 22,
+    "username": "{{SSH_USER}}",
+    "privateKeyPath": "{{KEY_PATH}}"
+  },
+  "jump_host": { "enabled": false },
+  "output": {
+    "format": "summary",
+    "save_result": true,
+    "result_key": "layer1_result"
+  },
+  "execution_sequence": [
+    {
+      "step_id": 1,
+      "name": "Init log directory",
+      "command": "mkdir -p {{LOG_DIR}} && echo '[ChaosOS] Layer 1 started at '$(date -Iseconds)",
+      "depends_on": [],
+      "on_failure": "abort"
+    },
+    {
+      "step_id": 2,
+      "name": "Detect kernel type",
+      "command": "uname -sr && uname -v | grep -oE '(Darwin|Linux|XNU|GNU)' | head -5",
+      "depends_on": [1],
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 3,
+      "name": "Scan syscall conflicts",
+      "command": "cat /proc/kallsyms 2>/dev/null | grep -i 'mach\\|xnu\\|darwin' | head -20 || echo 'NO_XNU_SYMBOLS_DETECTED'",
+      "depends_on": [1],
+      "parallel_group": "layer1-scan",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 4,
+      "name": "Check memory segmentation violations",
+      "command": "dmesg 2>/dev/null | grep -iE '(segfault|memory|oom|killed)' | tail -20 || journalctl -k --since '1 hour ago' 2>/dev/null | grep -iE '(segfault|oom)' | tail -20 || echo 'NO_VIOLATIONS'",
+      "depends_on": [1],
+      "parallel_group": "layer1-scan",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 5,
+      "name": "Detect filesystem collision (APFS/ext4)",
+      "command": "mount | grep -iE '(apfs|hfs|exfat|ntfs)' || echo 'STANDARD_LINUX_FS'; df -Th 2>/dev/null | grep -v tmpfs | head -10",
+      "depends_on": [1],
+      "parallel_group": "layer1-scan",
+      "on_failure": "continue"
+    },
+    {
+      "step_id": 6,
+      "name": "Save Layer 1 report",
+      "command": "echo '{\"layer\":1,\"status\":\"complete\",\"timestamp\":\"'$(date -Iseconds)'\",\"threshold\":\"CRITICAL\"}' > {{LOG_DIR}}/layer1.json && cat {{LOG_DIR}}/layer1.json",
+      "depends_on": [2, 3, 4, 5],
+      "on_failure": "continue"
+    }
+  ]
+}
