@@ -1,0 +1,27 @@
+kind = "web"
+previewPath = "/"
+title = "SaaC DeviL ENTERPRISE"
+version = "1.0.0"
+id = "artifacts/saac-devil"
+router = "path"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 23261
+
+[services.development]
+run = "pnpm --filter @workspace/saac-devil run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/saac-devil", "run", "build" ]
+serve = "static"
+publicDir = "artifacts/saac-devil/dist/public"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "23261"
+BASE_PATH = "/"

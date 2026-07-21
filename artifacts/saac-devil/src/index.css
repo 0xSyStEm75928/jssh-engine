@@ -1,0 +1,239 @@
+@import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap');
+@import 'tailwindcss';
+@import 'tw-animate-css';
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+
+  --color-label: hsl(var(--label));
+
+  --font-mono: 'Share Tech Mono', monospace;
+  --font-sans: 'Share Tech Mono', monospace;
+
+  --radius-sm: 0;
+  --radius-md: 0;
+  --radius-lg: 0;
+  --radius-xl: 0;
+}
+
+/* DAY MODE (Light-ish but still dark terminal vibe) */
+:root {
+  --background: 0 0% 5%;
+  --foreground: 180 100% 40%; /* Teal/Cyan */
+  --border: 180 100% 40% / 0.3;
+  --input: 0 0% 10%;
+  --ring: 180 100% 40%;
+  
+  --primary: 180 100% 40%;
+  --primary-foreground: 0 0% 0%;
+  
+  --destructive: 0 80% 50%;
+  --destructive-foreground: 0 0% 100%;
+  
+  --accent: 288 80% 60%;
+  --accent-foreground: 0 0% 100%;
+
+  --muted: 180 20% 20%;
+  --muted-foreground: 180 50% 60%;
+
+  --label: 40 80% 50%;
+
+  --glow-primary: 0 0 10px rgba(0, 200, 255, 0.5);
+  --glow-destructive: 0 0 10px rgba(255, 0, 50, 0.5);
+}
+
+/* NIGHT MODE (Deep Dark, Toxic Neon) */
+.dark {
+  --background: 0 0% 0%;
+  --foreground: 135 100% 50%; /* Matrix Green */
+  --border: 135 100% 50% / 0.3;
+  --input: 0 0% 2%;
+  --ring: 135 100% 50%;
+  
+  --primary: 135 100% 50%;
+  --primary-foreground: 0 0% 0%;
+  
+  --destructive: 344 100% 50%; /* Danger Red */
+  --destructive-foreground: 0 0% 100%;
+  
+  --accent: 24 100% 50%; /* Toxic Orange */
+  --accent-foreground: 0 0% 0%;
+
+  --muted: 135 100% 10%;
+  --muted-foreground: 135 100% 40%;
+
+  --label: 40 100% 50%; /* Yellow/Orange */
+
+  --glow-primary: 0 0 10px rgba(0, 255, 65, 0.5);
+  --glow-destructive: 0 0 10px rgba(255, 0, 68, 0.5);
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-mono antialiased bg-background text-foreground;
+    overflow-x: hidden;
+  }
+}
+
+/* CRT Scanlines Overlay */
+body::before {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: linear-gradient(
+    to bottom,
+    rgba(18, 16, 16, 0) 50%,
+    rgba(0, 0, 0, 0.25) 50%
+  );
+  background-size: 100% 4px;
+  z-index: 9999;
+  pointer-events: none;
+}
+
+/* CRT Flicker / Vignette */
+body::after {
+  content: " ";
+  display: block;
+  position: fixed;
+  top: 0;
+  left: 0;
+  bottom: 0;
+  right: 0;
+  background: radial-gradient(circle, rgba(0,0,0,0) 60%, rgba(0,0,0,0.4) 100%);
+  z-index: 9998;
+  pointer-events: none;
+  animation: flicker 0.15s infinite;
+}
+
+@keyframes flicker {
+  0% { opacity: 0.95; }
+  100% { opacity: 1; }
+}
+
+/* Glitch effects */
+.glitch-hover:hover {
+  animation: glitch-anim 0.3s cubic-bezier(.25, .46, .45, .94) both infinite;
+  color: hsl(var(--foreground));
+  text-shadow: 2px 0 hsl(var(--destructive)), -2px 0 hsl(var(--primary));
+}
+
+@keyframes glitch-anim {
+  0% { transform: translate(0) }
+  20% { transform: translate(-2px, 1px) }
+  40% { transform: translate(-1px, -1px) }
+  60% { transform: translate(2px, 1px) }
+  80% { transform: translate(1px, -1px) }
+  100% { transform: translate(0) }
+}
+
+.ambient-glitch {
+  animation: ambient-glitch-anim 4s infinite;
+}
+
+@keyframes ambient-glitch-anim {
+  0%, 96%, 98%, 100% { transform: none; filter: none; }
+  97% { transform: skewX(10deg); filter: hue-rotate(90deg); }
+  99% { transform: skewX(-10deg); filter: invert(1); }
+}
+
+.panel-container {
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  border: 1px solid hsl(var(--border));
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 255, 65, 0.05);
+}
+.dark .panel-container {
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.8), inset 0 0 20px rgba(0, 255, 65, 0.1);
+}
+
+.glass-btn {
+  @apply border border-border bg-transparent text-foreground uppercase transition-all duration-200 cursor-pointer;
+  box-shadow: 0 0 5px rgba(0, 0, 0, 0.5);
+}
+.glass-btn:hover {
+  @apply bg-primary text-primary-foreground;
+  box-shadow: var(--glow-primary);
+}
+.glass-btn:active {
+  transform: scale(0.98);
+}
+.glass-btn.danger {
+  @apply text-destructive border-destructive;
+}
+.glass-btn.danger:hover {
+  @apply bg-destructive text-destructive-foreground;
+  box-shadow: var(--glow-destructive);
+}
+
+.text-glow {
+  text-shadow: 0 0 5px currentColor;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: hsl(var(--background));
+  border-left: 1px solid hsl(var(--border));
+}
+::-webkit-scrollbar-thumb {
+  background: hsl(var(--primary));
+  border: 1px solid hsl(var(--background));
+}
+::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--accent));
+}
+
+.blinking-cursor::after {
+  content: '█';
+  animation: blink 1s step-end infinite;
+  margin-left: 4px;
+}
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
+
+.typewriter-text {
+  overflow: hidden;
+  white-space: nowrap;
+  border-right: 2px solid hsl(var(--primary));
+  animation: typing 2s steps(40, end), blink-caret 0.75s step-end infinite;
+}
+@keyframes typing {
+  from { width: 0 }
+  to { width: 100% }
+}
+@keyframes blink-caret {
+  from, to { border-color: transparent }
+  50% { border-color: hsl(var(--primary)) }
+}
