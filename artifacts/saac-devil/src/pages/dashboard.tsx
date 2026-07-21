@@ -16,7 +16,9 @@ export default function Dashboard() {
 
   useEffect(() => {
     addLog("SYS_INIT", "Dashboard loaded. User granted ROOT access.", "success");
-  }, [addLog]);
+  // addLog は useCallback で安定しているが、マウント時1回だけで十分
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   const toggleTheme = () => {
     const newTheme = theme === "dark" ? "light" : "dark";

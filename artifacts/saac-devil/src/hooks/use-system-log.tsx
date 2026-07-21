@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode } from "react";
+import { createContext, useContext, useState, useCallback, ReactNode } from "react";
 
 export type LogEntry = {
   id: string;
@@ -19,7 +19,7 @@ const LogContext = createContext<LogContextType | undefined>(undefined);
 export function LogProvider({ children }: { children: ReactNode }) {
   const [logs, setLogs] = useState<LogEntry[]>([]);
 
-  const addLog = (action: string, result: string, type: LogEntry["type"] = "info") => {
+  const addLog = useCallback((action: string, result: string, type: LogEntry["type"] = "info") => {
     const now = new Date();
     const timestamp = `${now.getHours().toString().padStart(2, "0")}:${now
       .getMinutes()
@@ -35,9 +35,9 @@ export function LogProvider({ children }: { children: ReactNode }) {
     };
 
     setLogs((prev) => [...prev, newLog]);
-  };
+  }, []);
 
-  const clearLogs = () => setLogs([]);
+  const clearLogs = useCallback(() => setLogs([]), []);
 
   return (
     <LogContext.Provider value={{ logs, addLog, clearLogs }}>
