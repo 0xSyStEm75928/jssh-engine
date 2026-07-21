@@ -1,7 +1,11 @@
 #!/usr/bin/env node
 /**
  * index.js — LuciFeR0x0systeM :: jssh DAG Execution Engine
- * 使い方: node index.js payload.json
+ *
+ * 使い方:
+ *   jssh -s <payload.json>          # ストリーム出力モード（リアルタイム）
+ *   jssh <payload.json>             # バッファ出力モード
+ *   node index.js -s <payload.json>
  */
 
 import { readFileSync } from 'fs';
@@ -12,40 +16,81 @@ import { runBatch } from './runner.js';
 
 const ANSI = {
   red: '\x1b[1;31m', grn: '\x1b[1;32m',
-  cyn: '\x1b[1;36m', dim: '\x1b[2;37m', nc: '\x1b[0m',
+  cyn: '\x1b[1;36m', dim: '\x1b[2;37m',
+  ylw: '\x1b[1;33m', nc:  '\x1b[0m',
 };
 const c = (col, msg) => `${ANSI[col]}${msg}${ANSI.nc}`;
 
-function printBanner() {
+// __で始まるキーを再帰的に除去（コメントフィールド）
+function stripDocs(obj) {
+  if (Array.isArray(obj)) return obj.map(stripDocs);
+  if (obj && typeof obj === 'object') {
+    return Object.fromEntries(
+      Object.entries(obj)
+        .filter(([k]) => !k.startsWith('__'))
+        .map(([k, v]) => [k, stripDocs(v)])
+    );
+  }
+  return obj;
+}
+
+function parseArgs(argv) {
+  const args   = argv.slice(2);
+  const stream = args.includes('-s') || args.includes('--stream');
+  const file   = args.find(a => !a.startsWith('-'));
+  const help   = args.includes('-h') || args.includes('--help') || !file;
+  return { stream, file, help };
+}
+
+function printBanner(stream) {
   console.log(c('red', `
   _     _   _  ____ _ _____ ___  ____
  | |   | | | |/ ___(_)  __|  __|| __ \\
  | |   | | | | |   | | |__ | _| |    /
  | |___| |_| | |___| |  __|| |__|\\|\\ \\
  |_____|\\_____|\\____|_|_|  |_____|_| \\_|
-     :::: 0 x 0  :  jssh Engine v2 ::::
+     :::: 0x0 :: jssh Engine v2 ::::
 `));
+  if (stream) console.log(c('ylw', '  [MODE] STREAM — リアルタイム出力有効\n'));
+}
+
+function printHelp() {
+  console.log(`
+  ${c('cyn','使い方:')}
+    jssh -s <payload.json>     ストリーム出力（リアルタイム）
+    jssh <payload.json>        通常実行
+    jssh -h                    このヘルプ
+
+  ${c('cyn','フラグ:')}
+    -s / --stream    実行結果をステップ完了ごとにストリーム出力
+    -h / --help      ヘルプ表示
+
+  ${c('cyn','サンプル:')}
+    jssh -s payload.json
+    jssh master-template.json
+  `);
 }
 
 async function main() {
-  printBanner();
+  const { stream, file, help } = parseArgs(process.argv);
 
-  const payloadPath = process.argv[2];
-  if (!payloadPath) {
-    console.error(c('red', '[!] Usage: node index.js <payload.json>'));
-    process.exit(1);
-  }
+  printBanner(stream);
 
-  // --- 1. JSONロード & バリデーション ---
+  if (help) { printHelp(); process.exit(0); }
+
+  const payloadPath = file;
+
+  // --- 1. JSONロード & __docコメント除去 & バリデーション ---
   let payload;
   try {
-    payload = JSON.parse(readFileSync(payloadPath, 'utf-8'));
+    const raw = JSON.parse(readFileSync(payloadPath, 'utf-8'));
+    payload   = stripDocs(raw); // __で始まるコメントフィールドを除去
   } catch (e) {
     console.error(c('red', `[!] Failed to parse payload: ${e.message}`));
     process.exit(1);
   }
 
-  const { title, version, metadata, variables = {}, connection_settings, execution_sequence, hooks } = payload;
+  const { title, version, metadata, variables = {}, connection_settings, execution_sequence, hooks, output = {} } = payload;
 
   console.log(c('cyn', `[PAYLOAD] ${title} v${version}`));
   if (metadata) {
@@ -127,10 +172,16 @@ async function main() {
   }
 
   // --- 7. JSON出力 ---
-  const outputPath = payloadPath.replace(/\.json$/, '.result.json');
-  const { writeFileSync } = await import('fs');
-  writeFileSync(outputPath, JSON.stringify(allResults, null, 2));
-  console.log(c('dim', `\n[OUT] Results saved → ${outputPath}`));
+  if (output.save_result !== false) {
+    const outputPath = (output.result_path ?? payloadPath.replace(/\.json$/, '.result.json'))
+      .replace('{{title}}', (title ?? 'result').replace(/\s+/g, '_'));
+    const { writeFileSync } = await import('fs');
+    const resultData = stream
+      ? { meta: { title, version, environment: metadata?.environment }, steps: allResults }
+      : allResults;
+    writeFileSync(outputPath, JSON.stringify(resultData, null, 2));
+    console.log(c('dim', `\n[OUT] Results saved → ${outputPath}`));
+  }
 
   closeConnection(connection);
   process.exit(pipelineFailed ? 1 : 0);

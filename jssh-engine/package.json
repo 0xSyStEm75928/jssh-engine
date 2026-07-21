@@ -1,12 +1,15 @@
 {
-  "name": "jssh-engine",
+  "name": "jssh",
   "version": "2.0.0",
   "description": "LuciFeR0x0systeM :: JSON-driven SSH DAG Execution Engine",
   "main": "index.js",
   "type": "module",
+  "bin": {
+    "jssh": "./index.js"
+  },
   "scripts": {
     "start": "node index.js",
-    "run-payload": "node index.js payload.json"
+    "link-cli": "npm link"
   },
   "dependencies": {
     "ssh2": "^1.15.0"

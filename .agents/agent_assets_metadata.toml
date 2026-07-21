@@ -18,3 +18,9 @@ id = "_L4NOGIvcUmIJeUF7o0y5"
 uri = "file://jssh-engine.zip"
 type = "unspecified"
 title = "jssh DAG Engine v2 — LuciFeR0x0systeM"
+
+[[outputs]]
+id = "tTnOvThKBzf9AdnzuDTbe"
+uri = "file://jssh-engine-v2.zip"
+type = "unspecified"
+title = "jssh v2 — Ubuntu 24.04 完全版"
