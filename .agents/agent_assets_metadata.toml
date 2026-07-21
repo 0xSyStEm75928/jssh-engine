@@ -6,3 +6,9 @@ id = "YAamqQeYEkBvzxvrax44P"
 uri = "file://LuciFeR0x0systeM.zip"
 type = "unspecified"
 title = "LuciFeR0x0systeM — ソースコード"
+
+[[outputs]]
+id = "sRSKXgwahlknlMs07jpn9"
+uri = "file://LuciFeR0x0systeM-CUI.zip"
+type = "unspecified"
+title = "LuciFeR0x0systeM — CUI版（iSH対応）"
