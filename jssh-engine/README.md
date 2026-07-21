@@ -1,90 +1,111 @@
-# LuciFeR0x0systeM :: jssh DAG Engine v2
+# jssh — JSON-driven SSH Automation Engine
 
-JSON-drivenなSSH自動化エンジン。  
-`depends_on` + `parallel_group` によるDAG実行、変数補間、踏み台対応。
-
-## セットアップ
-
-```bash
-npm install   # または pnpm install / yarn
-```
-
-## 実行
+Run multi-server SSH workflows from a single JSON file.  
+DAG execution · parallel groups · jump host · variable interpolation · retry control.
 
 ```bash
 node index.js payload.json
 ```
 
-結果は `payload.result.json` に自動出力される。
+---
+
+## Why jssh?
+
+Most SSH automation tools require you to learn a DSL (Ansible YAML, Fabric Python, etc.).  
+jssh uses **plain JSON** — no new syntax, runs anywhere Node.js runs, including **iSH on iOS**.
 
 ---
 
-## DAG実行の仕組み
+## Features
 
-```
-payload.json の execution_sequence:
-
-  step1 ──┬── step2 ──────────────────┐
-          ├── step3 (parallel: A) ──┤── step5
-          └── step4 (parallel: A) ──┘
-
-Level 1: [step1]
-Level 2: [step2] + [step3, step4 を並列グループAとして同時実行]
-Level 3: [step5]
-```
-
-- `depends_on: []` → Level 1（依存なし）
-- `depends_on: [1]` → step1完了後に実行
-- `parallel_group: "health-checks"` → 同グループは並列実行
-- 循環参照はKahn's algorithmで検出してエラー終了
-
----
-
-## on_failure の挙動
-
-| 値 | 挙動 |
+| Feature | Description |
 |---|---|
-| `abort` | パイプライン即停止。後続stepはすべて `skipped` |
-| `continue` | 失敗を無視して次へ |
-| `retry` | `retry_count` 回リトライ後に `abort` or `continue` |
+| **DAG execution** | `depends_on` + topological sort. Circular deps detected at load time. |
+| **Parallel groups** | `parallel_group: "name"` runs steps concurrently |
+| **Jump host** | Bastion tunneling via `ssh2` `direct-tcpip` |
+| **Variable interpolation** | `{{VAR}}` expanded across all fields |
+| **on_failure control** | `abort` / `continue` / `retry` per step |
+| **Result saving** | `output.save_result: true` captures stdout to next step |
 
 ---
 
-## 変数補間
+## Quickstart
 
-`variables` に定義した値が `{{VARIABLE_NAME}}` として全フィールドに展開される。
-
-```json
-"variables": { "TARGET_HOST": "192.168.1.100" },
-"connection_settings": { "host": "{{TARGET_HOST}}" }
+```bash
+git clone https://github.com/YOUR_GITHUB/jssh-engine
+cd jssh-engine
+npm install
+node index.js demo-pack/01_multi-version-check.json
 ```
 
 ---
 
-## jump_host（踏み台）
+## Payload structure
 
 ```json
-"jump_host": {
-  "enabled": true,
-  "host": "bastion.example.com",
-  "port": 22,
-  "username": "jump_user"
+{
+  "name": "Deploy Nginx",
+  "variables": { "HOST": "192.168.1.100" },
+  "connection_settings": {
+    "host": "{{HOST}}", "port": 22,
+    "username": "root", "privateKeyPath": "~/.ssh/id_rsa"
+  },
+  "jump_host": { "enabled": false },
+  "execution_sequence": [
+    {
+      "step_id": 1, "name": "Install Nginx",
+      "command": "apt-get install -y nginx",
+      "depends_on": [], "on_failure": "abort"
+    },
+    {
+      "step_id": 2, "name": "Start Nginx",
+      "command": "systemctl enable --now nginx",
+      "depends_on": [1], "on_failure": "continue"
+    }
+  ]
 }
 ```
 
-ssh2 の `direct-tcpip` チャンネルで踏み台→ターゲットをトンネリング。
+---
+
+## Demo Pack (7 payloads)
+
+| # | Payload | Description |
+|---|---|---|
+| 01 | multi-version-check | Parallel version check across languages |
+| 02 | nginx-auto-deploy | Full Nginx install + config |
+| 03 | git-deploy | git pull → process restart |
+| 04 | docker-compose-stack | Docker Compose stack up |
+| 05 | ish-alpine-setup | iSH / Alpine Linux initial setup |
+| 06 | jump-host-multi | Multi-server via bastion |
+| 07 | btcpay-server-deploy | BTCPay Server full deploy |
 
 ---
 
-## ファイル構成
+## File structure
 
 ```
 jssh-engine/
-├── index.js        メインエントリ・バナー・サマリ出力
-├── dag.js          トポロジカルソート・循環参照検出
-├── interpolate.js  {{変数}} 補間エンジン
-├── ssh.js          ssh2ラッパー・jump_host・コマンド実行
-├── runner.js       on_failure/retry制御・バッチ並列実行
-├── payload.json    サンプルペイロード
+├── index.js        Entry point · banner · summary output
+├── dag.js          Topological sort · cycle detection (Kahn's algorithm)
+├── interpolate.js  {{variable}} interpolation engine
+├── ssh.js          ssh2 wrapper · jump_host tunnel · command exec
+├── runner.js       on_failure / retry / parallel batch execution
+├── demo-pack/      7 ready-to-run payloads
 └── package.json
 ```
+
+---
+
+## Demo Pack — $29
+
+Full demo-pack with all 7 payloads + inline documentation:  
+**[lucifer0x0system.pages.dev](https://lucifer0x0system.pages.dev)**
+
+EVM / ETH / USDT / MATIC accepted. No KYC.
+
+---
+
+## License
+
+MIT — engine is free. Demo Pack is paid.
