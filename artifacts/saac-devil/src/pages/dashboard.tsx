@@ -30,7 +30,7 @@ export default function Dashboard() {
       <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-border/50 pb-4">
         <div className="flex items-center space-x-4 mb-4 md:mb-0">
           <h1 className="text-2xl md:text-3xl font-bold text-primary tracking-tighter text-glow flex items-center">
-            <span>SaaC DeviL&gt;&gt;&gt;</span>
+            <span>LuciFeR0x0systeM&gt;&gt;&gt;</span>
             <span className="blinking-cursor"></span>
           </h1>
           <div className="bg-destructive text-destructive-foreground text-[10px] font-bold px-2 py-0.5 border border-destructive shadow-[0_0_10px_rgba(255,0,0,0.5)]">
