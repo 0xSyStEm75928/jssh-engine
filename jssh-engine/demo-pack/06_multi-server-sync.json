@@ -1,0 +1,92 @@
+{
+  "__doc": "複数サーバーに同じコマンドを同時並列実行 — 設定同期・一斉パッチ適用など",
+  "title": "Multi-Server Parallel Sync",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "category": "devops",
+    "description": "3台以上のサーバーに同じ操作を並列実行。jump_host経由も対応"
+  },
+  "variables": {
+    "JUMP_HOST": "bastion.example.com",
+    "JUMP_USER": "jump",
+    "CMD": "apt-get update -qq && apt-get upgrade -y 2>&1 | tail -5"
+  },
+  "connection_settings": {
+    "via_bastion_1": {
+      "host": "10.0.0.11",
+      "username": "root",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "jump_host": {
+        "host": "{{JUMP_HOST}}",
+        "username": "{{JUMP_USER}}",
+        "auth_method": "key",
+        "key_path": "~/.ssh/id_rsa"
+      },
+      "timeout": 60
+    },
+    "via_bastion_2": {
+      "host": "10.0.0.12",
+      "username": "root",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "jump_host": {
+        "host": "{{JUMP_HOST}}",
+        "username": "{{JUMP_USER}}",
+        "auth_method": "key",
+        "key_path": "~/.ssh/id_rsa"
+      },
+      "timeout": 60
+    },
+    "via_bastion_3": {
+      "host": "10.0.0.13",
+      "username": "root",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "jump_host": {
+        "host": "{{JUMP_HOST}}",
+        "username": "{{JUMP_USER}}",
+        "auth_method": "key",
+        "key_path": "~/.ssh/id_rsa"
+      },
+      "timeout": 60
+    }
+  },
+  "execution_sequence": [
+    {
+      "id": "sync_all",
+      "label": "全サーバー並列実行",
+      "parallel_group": [
+        {
+          "id": "srv1",
+          "connection": "via_bastion_1",
+          "command": "{{CMD}}"
+        },
+        {
+          "id": "srv2",
+          "connection": "via_bastion_2",
+          "command": "{{CMD}}"
+        },
+        {
+          "id": "srv3",
+          "connection": "via_bastion_3",
+          "command": "{{CMD}}"
+        }
+      ]
+    },
+    {
+      "id": "post_check",
+      "label": "全サーバー完了確認",
+      "parallel_group": [
+        { "id": "chk1", "connection": "via_bastion_1", "command": "uptime && uname -r" },
+        { "id": "chk2", "connection": "via_bastion_2", "command": "uptime && uname -r" },
+        { "id": "chk3", "connection": "via_bastion_3", "command": "uptime && uname -r" }
+      ]
+    }
+  ],
+  "output": {
+    "save_result": true,
+    "result_path": "./results/multi-server-sync.result.json"
+  }
+}

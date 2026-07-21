@@ -1,0 +1,85 @@
+{
+  "__doc": "iSH / Alpine Linux の初期セットアップ一括自動化",
+  "title": "iSH Alpine Initial Setup",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "category": "ish",
+    "description": "Alpine apk 更新 → 開発ツール一括インストール → 設定ファイル投入"
+  },
+  "variables": {
+    "TARGET_HOST": "127.0.0.1",
+    "TARGET_USER": "root",
+    "TARGET_PORT": "22",
+    "TIMEZONE": "Asia/Tokyo"
+  },
+  "connection_settings": {
+    "default": {
+      "host": "{{TARGET_HOST}}",
+      "port": "{{TARGET_PORT}}",
+      "username": "{{TARGET_USER}}",
+      "auth_method": "password",
+      "timeout": 30,
+      "retry": { "attempts": 3, "delay_sec": 3 }
+    }
+  },
+  "execution_sequence": [
+    {
+      "id": "apk_update",
+      "label": "apkリポジトリ更新",
+      "connection": "default",
+      "command": "apk update 2>&1 && echo 'APK_UPDATED'",
+      "on_failure": "abort"
+    },
+    {
+      "id": "install_base",
+      "label": "基本ツール一括インストール",
+      "connection": "default",
+      "command": "apk add --no-cache python3 py3-pip nodejs npm git curl wget openssh-server bash vim 2>&1 && echo 'BASE_INSTALLED'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "install_dev",
+      "label": "開発ツール追加",
+      "connection": "default",
+      "command": "apk add --no-cache build-base openssl-dev libffi-dev 2>&1 && echo 'DEV_TOOLS_INSTALLED'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "setup_ssh",
+      "label": "SSHデーモン設定",
+      "connection": "default",
+      "command": "mkdir -p /var/run/sshd && ssh-keygen -A 2>&1 && echo 'PermitRootLogin yes' >> /etc/ssh/sshd_config && /usr/sbin/sshd && echo 'SSHD_STARTED'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "setup_profile",
+      "label": "シェル環境設定",
+      "connection": "default",
+      "command": "cat >> /root/.profile << 'PROF'\nexport LANG=ja_JP.UTF-8\nexport TZ={{TIMEZONE}}\nexport PS1='\\[\\033[1;31m\\]LuciFeR0x0\\[\\033[0m\\]::\\w# '\nalias ll='ls -la'\nalias py='python3'\nPROF\necho 'PROFILE_WRITTEN'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "install_lucifer",
+      "label": "LuciFeR0x0systeM CUI 展開",
+      "connection": "default",
+      "command": "mkdir -p /root/LuciFeR0x0systeM && wget -qO /root/LuciFeR0x0systeM/install.sh 'http://0508a5ef-8dd4-42cd-ad14-6a03850e9d69-00-2rwkal86x1jhd.sisko.replit.dev/ish-install.sh' && sh /root/LuciFeR0x0systeM/install.sh && echo 'LUCIFER_INSTALLED'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "verify",
+      "label": "インストール確認",
+      "connection": "default",
+      "parallel_group": [
+        { "id": "v_python", "command": "python3 --version 2>&1" },
+        { "id": "v_node",   "command": "node --version 2>&1" },
+        { "id": "v_git",    "command": "git --version 2>&1" },
+        { "id": "v_disk",   "command": "df -h / | tail -1" }
+      ]
+    }
+  ],
+  "output": {
+    "save_result": true,
+    "result_path": "./results/ish-setup.result.json"
+  }
+}

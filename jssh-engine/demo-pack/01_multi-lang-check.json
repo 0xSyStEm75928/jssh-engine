@@ -1,0 +1,91 @@
+{
+  "__doc": "多言語バージョン確認 — 対象サーバーに何が入ってるか一発チェック",
+  "title": "Multi-Language Runtime Check",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "category": "diagnostic",
+    "description": "Python / Node / Ruby / Go / Rust / Java の有無とバージョンを並列確認"
+  },
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "TARGET_USER": "root",
+    "TARGET_PORT": "22"
+  },
+  "connection_settings": {
+    "default": {
+      "host": "{{TARGET_HOST}}",
+      "port": "{{TARGET_PORT}}",
+      "username": "{{TARGET_USER}}",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "timeout": 10,
+      "retry": { "attempts": 2, "delay_sec": 3 }
+    }
+  },
+  "execution_sequence": [
+    {
+      "id": "runtime_check",
+      "label": "全ランタイム並列チェック",
+      "connection": "default",
+      "parallel_group": [
+        {
+          "id": "chk_python",
+          "command": "python3 --version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_node",
+          "command": "node --version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_ruby",
+          "command": "ruby --version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_go",
+          "command": "go version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_rust",
+          "command": "rustc --version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_java",
+          "command": "java -version 2>&1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_php",
+          "command": "php --version 2>&1 | head -1 || echo 'NOT_INSTALLED'"
+        },
+        {
+          "id": "chk_perl",
+          "command": "perl --version 2>&1 | head -2 || echo 'NOT_INSTALLED'"
+        }
+      ]
+    },
+    {
+      "id": "os_info",
+      "label": "OS・カーネル情報",
+      "connection": "default",
+      "command": "echo '=== OS ===' && cat /etc/os-release 2>/dev/null || uname -a && echo '=== Kernel ===' && uname -r && echo '=== Arch ===' && uname -m",
+      "on_failure": "continue"
+    },
+    {
+      "id": "pkg_managers",
+      "label": "パッケージマネージャ確認",
+      "connection": "default",
+      "parallel_group": [
+        { "id": "chk_apt",  "command": "apt --version 2>&1 || echo 'N/A'" },
+        { "id": "chk_yum",  "command": "yum --version 2>&1 || echo 'N/A'" },
+        { "id": "chk_apk",  "command": "apk --version 2>&1 || echo 'N/A'" },
+        { "id": "chk_brew", "command": "brew --version 2>&1 || echo 'N/A'" },
+        { "id": "chk_pip",  "command": "pip3 --version 2>&1 || echo 'N/A'" },
+        { "id": "chk_npm",  "command": "npm --version 2>&1 || echo 'N/A'" }
+      ]
+    }
+  ],
+  "output": {
+    "save_result": true,
+    "result_path": "./results/multi-lang-check.result.json"
+  }
+}

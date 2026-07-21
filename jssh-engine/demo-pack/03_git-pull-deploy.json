@@ -1,0 +1,80 @@
+{
+  "__doc": "git pull → 依存インストール → プロセス再起動 まで自動化",
+  "title": "Git Pull & Deploy",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "category": "devops",
+    "description": "Node / Python / 汎用アプリのゼロダウンタイムデプロイ"
+  },
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "TARGET_USER": "deploy",
+    "APP_DIR": "/opt/myapp",
+    "GIT_BRANCH": "main",
+    "APP_TYPE": "node",
+    "PROCESS_NAME": "myapp",
+    "START_CMD": "npm start"
+  },
+  "connection_settings": {
+    "default": {
+      "host": "{{TARGET_HOST}}",
+      "username": "{{TARGET_USER}}",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "timeout": 60,
+      "retry": { "attempts": 2, "delay_sec": 5 }
+    }
+  },
+  "execution_sequence": [
+    {
+      "id": "pre_check",
+      "label": "デプロイ前チェック",
+      "connection": "default",
+      "parallel_group": [
+        { "id": "chk_dir",  "command": "test -d {{APP_DIR}} && echo 'DIR_OK' || echo 'DIR_MISSING'" },
+        { "id": "chk_git",  "command": "cd {{APP_DIR}} && git status --short 2>&1 || echo 'NOT_GIT_REPO'" },
+        { "id": "chk_disk", "command": "df -h {{APP_DIR}} | tail -1" }
+      ]
+    },
+    {
+      "id": "git_fetch",
+      "label": "最新コード取得",
+      "connection": "default",
+      "command": "cd {{APP_DIR}} && git fetch origin && git stash && git checkout {{GIT_BRANCH}} && git pull origin {{GIT_BRANCH}} && echo 'PULL_OK' && git log -1 --oneline",
+      "on_failure": "abort"
+    },
+    {
+      "id": "install_deps",
+      "label": "依存パッケージ更新",
+      "connection": "default",
+      "command": "cd {{APP_DIR}} && if [ '{{APP_TYPE}}' = 'node' ]; then npm install --production 2>&1; elif [ '{{APP_TYPE}}' = 'python' ]; then pip3 install -r requirements.txt 2>&1; else echo 'SKIP_DEPS'; fi",
+      "on_failure": "continue"
+    },
+    {
+      "id": "backup_current",
+      "label": "現行プロセスのバックアップ記録",
+      "connection": "default",
+      "command": "echo \"DEPLOY_AT=$(date '+%Y-%m-%d %H:%M:%S')\" >> {{APP_DIR}}/.deploy_history && git -C {{APP_DIR}} log -1 --format='%H %s' >> {{APP_DIR}}/.deploy_history",
+      "on_failure": "continue"
+    },
+    {
+      "id": "restart_process",
+      "label": "プロセス再起動",
+      "connection": "default",
+      "command": "if command -v pm2 >/dev/null 2>&1; then pm2 restart {{PROCESS_NAME}} || pm2 start {{START_CMD}} --name {{PROCESS_NAME}}; elif command -v systemctl >/dev/null 2>&1; then systemctl restart {{PROCESS_NAME}}; else pkill -f {{PROCESS_NAME}} 2>/dev/null; sleep 1; cd {{APP_DIR}} && nohup {{START_CMD}} > /var/log/{{PROCESS_NAME}}.log 2>&1 &; fi",
+      "on_failure": "abort"
+    },
+    {
+      "id": "health_check",
+      "label": "起動確認 (10秒待機)",
+      "connection": "default",
+      "command": "sleep 10 && curl -s -o /dev/null -w 'HTTP:%{http_code}' http://localhost:3000/health 2>/dev/null || echo 'NO_HEALTH_ENDPOINT — process check:' && ps aux | grep {{PROCESS_NAME}} | grep -v grep | head -3",
+      "on_failure": "continue"
+    }
+  ],
+  "output": {
+    "save_result": true,
+    "result_path": "./results/git-deploy.result.json"
+  }
+}

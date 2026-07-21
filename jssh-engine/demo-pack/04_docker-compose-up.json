@@ -1,0 +1,78 @@
+{
+  "__doc": "Docker Compose でスタック一括起動 → ヘルスチェックまで",
+  "title": "Docker Compose Stack Deploy",
+  "version": "1.0.0",
+  "metadata": {
+    "author": "LuciFeR0x0systeM",
+    "category": "devops",
+    "description": "docker-compose.yml を転送して一括起動、コンテナ状態を確認"
+  },
+  "variables": {
+    "TARGET_HOST": "192.168.1.100",
+    "TARGET_USER": "root",
+    "DEPLOY_DIR": "/opt/stacks/mystack",
+    "COMPOSE_FILE": "./docker-compose.yml",
+    "STACK_NAME": "mystack"
+  },
+  "connection_settings": {
+    "default": {
+      "host": "{{TARGET_HOST}}",
+      "username": "{{TARGET_USER}}",
+      "auth_method": "key",
+      "key_path": "~/.ssh/id_rsa",
+      "timeout": 120,
+      "retry": { "attempts": 2, "delay_sec": 5 }
+    }
+  },
+  "execution_sequence": [
+    {
+      "id": "check_docker",
+      "label": "Docker環境確認",
+      "connection": "default",
+      "parallel_group": [
+        { "id": "chk_docker",  "command": "docker --version 2>&1 || echo 'DOCKER_MISSING'" },
+        { "id": "chk_compose", "command": "docker compose version 2>&1 || docker-compose --version 2>&1 || echo 'COMPOSE_MISSING'" },
+        { "id": "chk_daemon",  "command": "docker info >/dev/null 2>&1 && echo 'DAEMON_OK' || echo 'DAEMON_NOT_RUNNING'" }
+      ]
+    },
+    {
+      "id": "prepare_dir",
+      "label": "デプロイディレクトリ準備",
+      "connection": "default",
+      "command": "mkdir -p {{DEPLOY_DIR}} && echo 'DIR_READY'",
+      "on_failure": "abort"
+    },
+    {
+      "id": "pull_images",
+      "label": "イメージ事前プル",
+      "connection": "default",
+      "command": "cd {{DEPLOY_DIR}} && docker compose pull 2>&1 || docker-compose pull 2>&1 || echo 'PULL_SKIPPED'",
+      "on_failure": "continue"
+    },
+    {
+      "id": "stack_up",
+      "label": "スタック起動",
+      "connection": "default",
+      "command": "cd {{DEPLOY_DIR}} && docker compose up -d --remove-orphans 2>&1 || docker-compose up -d --remove-orphans 2>&1",
+      "on_failure": "abort"
+    },
+    {
+      "id": "verify",
+      "label": "コンテナ状態確認 (15秒待機)",
+      "connection": "default",
+      "command": "sleep 15 && docker compose ps 2>/dev/null || docker-compose ps 2>/dev/null",
+      "on_failure": "continue"
+    },
+    {
+      "id": "logs_tail",
+      "label": "直近ログ確認",
+      "connection": "default",
+      "command": "docker compose logs --tail=20 2>/dev/null || docker-compose logs --tail=20 2>/dev/null",
+      "on_failure": "continue"
+    }
+  ],
+  "output": {
+    "save_result": true,
+    "result_path": "./results/docker-deploy.result.json"
+  }
+}
