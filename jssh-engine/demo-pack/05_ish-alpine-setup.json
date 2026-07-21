@@ -63,7 +63,7 @@
       "id": "install_lucifer",
       "label": "LuciFeR0x0systeM CUI 展開",
       "connection": "default",
-      "command": "mkdir -p /root/LuciFeR0x0systeM && wget -qO /root/LuciFeR0x0systeM/install.sh 'http://0508a5ef-8dd4-42cd-ad14-6a03850e9d69-00-2rwkal86x1jhd.sisko.replit.dev/ish-install.sh' && sh /root/LuciFeR0x0systeM/install.sh && echo 'LUCIFER_INSTALLED'",
+      "command": "mkdir -p /root/LuciFeR0x0systeM && wget -qO /root/LuciFeR0x0systeM/install.sh 'https://lucifer0x0system.xyz/ish-install.sh' && sh /root/LuciFeR0x0systeM/install.sh && echo 'LUCIFER_INSTALLED'",
       "on_failure": "continue"
     },
     {

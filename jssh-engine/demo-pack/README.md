@@ -72,4 +72,4 @@ jssh -s payload.json
 ## ライセンス
 
 個人・商用利用可。再配布・転売不可。
-© 2026 LuciFeR0x0systeM
+© 2026 LuciFeR0x0systeM — lucifer0x0system.xyz

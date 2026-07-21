@@ -10,8 +10,8 @@
   "variables": {
     "TARGET_HOST":    "YOUR_VPS_IP",
     "TARGET_USER":    "root",
-    "DOMAIN":         "pay.yourdomain.com",
-    "ADMIN_EMAIL":    "you@example.com",
+    "DOMAIN":         "pay.lucifer0x0system.xyz",
+    "ADMIN_EMAIL":    "admin@lucifer0x0system.xyz",
     "CRYPTO_CODE":    "BTC",
     "LIGHTNING":      "lnd",
     "BTCPAY_DIR":     "/opt/btcpay",
@@ -88,7 +88,7 @@
       "id": "print_info",
       "label": "アクセス情報表示",
       "connection": "default",
-      "command": "echo '========================================' && echo 'BTCPay Server セットアップ完了！' && echo '管理画面: https://{{DOMAIN}}' && echo 'ドメインDNS: {{DOMAIN}} → {{TARGET_HOST}}' && echo '初回アクセスでアカウント登録してください' && echo '========================================'",
+      "command": "echo '========================================' && echo 'BTCPay Server セットアップ完了！' && echo '管理画面: https://pay.lucifer0x0system.xyz' && echo 'ドメインDNS: A record  pay.lucifer0x0system.xyz → {{TARGET_HOST}}' && echo '初回アクセスでアカウント登録してください' && echo '========================================'",
       "on_failure": "continue"
     }
   ],
